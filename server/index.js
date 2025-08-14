@@ -29,8 +29,8 @@ const authRoutes = require("./routes/authRoutes");
 const blueprintRoutes = require("./routes/blueprintRoutes");
 
 // Mount routes with base path
-app.use("/api/v1/auth", authRoutes);            // Auth routes
-app.use("/api/v1/blueprint", blueprintRoutes);  // Blueprint generation routes
+app.use("/api/v1/auth", authRoutes);            
+app.use("/api/v1/blueprint", blueprintRoutes); 
 
 // Health check route
 app.get("/api/health", (req, res) => {
@@ -62,3 +62,6 @@ process.on("unhandledRejection", (err) => {
 // Start the server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+
+
