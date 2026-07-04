@@ -1,15 +1,13 @@
-// This middleware handles errors that occur in any route/controller
-const errorHandler = (err, req, res, next) => {
-  console.error("🔥 Error:", err.message);
+// middlewares/errorHandler.js
+module.exports = (err, req, res, next) => {
+  console.error('🔥 [ERROR HANDLER] Error stack:', err.stack);
+  console.error('🔥 [ERROR HANDLER] Request body:', req.body);
+  console.error('🔥 [ERROR HANDLER] Request params:', req.params);
+  console.error('🔥 [ERROR HANDLER] Request query:', req.query);
 
-  // Default to 500 (Internal Server Error) if statusCode not set
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-
-  res.status(statusCode).json({
+  res.status(err.status || 500).json({
     success: false,
-    message: err.message || "Something went wrong!",
-    stack: process.env.NODE_ENV === "production" ? null : err.stack,
+    message: err.message || 'Internal Server Error',
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 };
-
-module.exports = errorHandler;

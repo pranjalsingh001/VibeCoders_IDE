@@ -1,5 +1,5 @@
 // controllers/planningController.js
-const { getClarifyingQuestions } = require("../services/planning/planningService");
+const { getClarifyingQuestions } = require("../services/planningService");
 const DesignDoc = require("../models/DesignDoc");
 const Project = require("../models/Project");
 
@@ -44,7 +44,7 @@ exports.getClarification = async (req, res) => {
   }
 };
 
-// controllers/planningController.js
+// POST /api/v1/planning/clarify/answer
 exports.submitClarificationAnswers = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -71,3 +71,28 @@ exports.submitClarificationAnswers = async (req, res) => {
   }
 };
 
+// GET /api/v1/planning/docs?projectId=...
+exports.getPlanningDocs = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { projectId } = req.query;
+
+    if (!projectId) return res.status(400).json({ success: false, message: "projectId is required" });
+
+    // Ensure the user owns the project
+    const project = await Project.findOne({ _id: projectId, owner: userId });
+    if (!project) return res.status(404).json({ success: false, message: "Project not found" });
+
+    const questionsDoc = await DesignDoc.findOne({ project: projectId, type: "clarification-questions" }).sort({ createdAt: -1 });
+    const answersDoc = await DesignDoc.findOne({ project: projectId, type: "clarification-answers" }).sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      questions: questionsDoc ? questionsDoc.content : null,
+      answers: answersDoc ? answersDoc.content : null
+    });
+  } catch (err) {
+    console.error("GetPlanningDocs Error:", err);
+    return res.status(500).json({ success: false, message: "Failed to fetch planning docs" });
+  }
+};

@@ -18,10 +18,15 @@ exports.registerUser = async (req, res) => {
       return res.status(400).json({ message: "All fields are required." });
     }
 
-    // 2️⃣ Check if email is already registered
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "User already exists." });
+    // 2️⃣ Check if email or username is already registered
+    const existingUserByEmail = await User.findOne({ email });
+    if (existingUserByEmail) {
+      return res.status(400).json({ message: "Email already registered." });
+    }
+
+    const existingUserByUsername = await User.findOne({ username });
+    if (existingUserByUsername) {
+      return res.status(400).json({ message: "Username already taken." });
     }
 
     // 3️⃣ Hash password
@@ -69,11 +74,15 @@ exports.loginUser = async (req, res) => {
 
     // 2️⃣ Check if user exists
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid credentials." });
+    if (!user) return res.status(400).json({ 
+      message: "Invalid credentials." 
+    });
 
     // 3️⃣ Compare password
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Invalid credentials." });
+    if (!isMatch) return res.status(400).json({ 
+      message: "Invalid credentials." 
+    });
 
     // 4️⃣ Generate JWT token
     const token = jwt.sign(
@@ -91,5 +100,55 @@ exports.loginUser = async (req, res) => {
   } catch (error) {
     console.error("❌ Login Error:", error);
     res.status(500).json({ message: "Server error while logging in." });
+  }
+};
+
+/**
+ * @desc   Get current user info
+ * @route  GET /api/v1/auth/me
+ * @access Private
+ */
+exports.getCurrentUser = async (req, res) => {
+  try {
+    // The protect middleware should have set req.user
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    // Check if this is development mode with mock user
+    const devUserId = '507f1f77bcf86cd799439011';
+    if (req.user.userId && req.user.userId.toString() === devUserId) {
+      return res.status(200).json({
+        success: true,
+        user: {
+          id: devUserId,
+          username: 'Developer',
+          email: 'developer@test.com',
+          role: 'user',
+          createdAt: new Date().toISOString()
+        }
+      });
+    }
+
+    // Find user by ID from the JWT token
+    const user = await User.findById(req.user.userId).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt
+      }
+    });
+  } catch (error) {
+    console.error("❌ Get Current User Error:", error);
+    res.status(500).json({ message: "Server error while fetching user info." });
   }
 };

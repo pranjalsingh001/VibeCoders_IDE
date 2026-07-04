@@ -1,9 +1,9 @@
 const router = require("express").Router();
 const { protect } = require("../middlewares/authMiddleware");
-const ctrl = require("../controllers/fileController");
+const { write, read, list } = require("../controllers/fileController");
 
-router.post("/write", protect, ctrl.write);
-router.get("/read", protect, ctrl.read);
-router.get("/list", protect, ctrl.list);
+router.post("/write", protect, write);
+router.get("/read", protect, read);
+router.get("/list", protect, list);
 
 module.exports = router;

@@ -24,6 +24,4 @@ async function executeUserCode({ code, language = "node" }) {
   }
 }
 
-module.exports = {
-  executeUserCode,
-};
+module.exports = {executeUserCode};

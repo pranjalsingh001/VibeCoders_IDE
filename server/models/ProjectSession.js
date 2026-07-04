@@ -2,15 +2,20 @@ const mongoose = require("mongoose");
 
 const ProjectSessionSchema = new mongoose.Schema(
   {
-    project: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: true }, // must link to Project
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    project: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: true },
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, 
     status: {
       type: String,
-      enum: ["idle", "starting", "running", "stopped", "error"],
-      default: "idle",
+      enum: ["active", "stopped", "error"], // match controller values
+      default: "active",
     },
-    containerId: { type: String }, // Docker container for isolated execution
-    logs: [{ type: String }], // optional: store execution logs
+    containerId: { type: String },
+    port: { type: Number },
+    url: { type: String },
+    logs: [{ type: String }],
+    meta: { type: Object }, // optional, for mode=stub/dev/docker
+    startedAt: { type: Date },
+    endedAt: { type: Date },
   },
   { timestamps: true }
 );

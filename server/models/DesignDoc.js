@@ -8,12 +8,12 @@ const DesignDocSchema = new mongoose.Schema({
     enum: [
       "clarification-questions", 
       "clarification-answers",   
-      "hld", 
-      "lld"
+      "HLD", 
+      "LLD"
     ], 
     required: true 
   },
-  content: { type: mongoose.Schema.Types.Mixed, required: true }, // flexible: text or JSON
+  content: { type: mongoose.Schema.Types.Mixed, required: true }, 
   promptUsed: { type: String }
 }, { timestamps: true });
 

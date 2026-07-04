@@ -1,50 +1,64 @@
-const fs = require("fs");
-const fsp = fs.promises;
-const path = require("path");
-const sanitize = require("sanitize-filename");
+const fs = require('fs/promises');
+const path = require('path');
+const { access } = require('fs/promises');
+const Project = require('../models/Project');
 
-// root where project code will live (ignored by Git)
-const PROJECTS_ROOT = path.join(process.cwd(), "projects");
-
-// Builds a safe absolute path for a user/project file
-function buildProjectPath({ userId, projectId, relativePath }) {
-  const safeUser = sanitize(String(userId));
-  const safeProject = sanitize(String(projectId));
-  const safeRel = relativePath ? relativePath.split("/").map(sanitize).join(path.sep) : "";
-  const fullPath = path.join(PROJECTS_ROOT, safeUser, safeProject, safeRel);
-  // Prevent path traversal
-  const normalized = path.normalize(fullPath);
-  if (!normalized.startsWith(path.join(PROJECTS_ROOT, safeUser, safeProject))) {
-    throw new Error("Invalid path.");
+async function buildProjectPath({ userId, projectId, relativePath = '' }) {
+  const project = await Project.findById(projectId);
+  if (!project || project.owner.toString() !== userId) {
+    throw new Error('Unauthorized access to project');
   }
-  return normalized;
+
+  const projectsRoot = process.env.PROJECTS_ROOT || path.join(__dirname, '../../../projects');
+  return path.join(projectsRoot, userId.toString(), projectId.toString(), relativePath);
 }
 
-async function ensureDir(dir) {
-  await fsp.mkdir(dir, { recursive: true });
+class FileService {
+  constructor({ projectService, config }) {
+    this.projectService = projectService;
+    this.projectsRoot = config.projectsRoot;
+  }
+
+  async writeFile({ userId, projectId, relativePath, content }) {
+    const project = await this.projectService.getProjectById(projectId);
+    if (!project || project.owner.toString() !== userId) {
+      throw new Error('Unauthorized access to project');
+    }
+
+    const fullPath = path.join(this.projectsRoot, userId.toString(), projectId.toString(), relativePath);
+    const dir = path.dirname(fullPath);
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(fullPath, content, 'utf8');
+    return fullPath;
+  }
+
+  async readFile({ userId, projectId, relativePath }) {
+    const project = await this.projectService.getProjectById(projectId);
+    if (!project || project.owner.toString() !== userId) {
+      throw new Error('Unauthorized access to project');
+    }
+
+    const fullPath = path.join(this.projectsRoot, userId.toString(), projectId.toString(), relativePath);
+    await access(fullPath); // Check if exists
+    const content = await fs.readFile(fullPath, 'utf8');
+    return { content, relativePath };
+  }
+
+  async listDir({ userId, projectId, relativeDir = '' }) {
+    const project = await this.projectService.getProjectById(projectId);
+    if (!project || project.owner.toString() !== userId) {
+      throw new Error('Unauthorized access to project');
+    }
+
+    const fullDir = path.join(this.projectsRoot, userId.toString(), projectId.toString(), relativeDir);
+    await access(fullDir); // Check if dir exists
+    const entries = await fs.readdir(fullDir, { withFileTypes: true });
+    return entries.map(entry => ({
+      name: entry.name,
+      isDirectory: entry.isDirectory(),
+      path: path.join(relativeDir, entry.name)
+    }));
+  }
 }
 
-// Write file contents safely
-async function writeFile({ userId, projectId, relativePath, content }) {
-  const fullPath = buildProjectPath({ userId, projectId, relativePath });
-  await ensureDir(path.dirname(fullPath));
-  await fsp.writeFile(fullPath, content, "utf8");
-  return fullPath;
-}
-
-// Read file
-async function readFile({ userId, projectId, relativePath }) {
-  const fullPath = buildProjectPath({ userId, projectId, relativePath });
-  const content = await fsp.readFile(fullPath, "utf8");
-  return { fullPath, content };
-}
-
-// List directory (shallow)
-async function listDir({ userId, projectId, relativeDir = "" }) {
-  const dirPath = buildProjectPath({ userId, projectId, relativePath: relativeDir });
-  await ensureDir(dirPath);
-  const names = await fsp.readdir(dirPath, { withFileTypes: true });
-  return names.map((e) => ({ name: e.name, type: e.isDirectory() ? "dir" : "file" }));
-}
-
-module.exports = { writeFile, readFile, listDir, buildProjectPath, PROJECTS_ROOT };
+module.exports = { FileService, buildProjectPath };

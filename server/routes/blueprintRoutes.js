@@ -1,9 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const { generateBlueprint } = require("../controllers/blueprintController");
-const authMiddleware = require("../middlewares/authMiddleware");
+const { generateBlueprint, getUserBlueprints, getBlueprintByProjectId } = require("../controllers/blueprintController");
+const { protect } = require("../middlewares/authMiddleware");
 
-// Route to generate blueprint from idea (only if logged in)
-router.post("/generate", authMiddleware.protect, generateBlueprint);
+// 🔒 Generate blueprint from an existing Project (by projectId)
+router.post("/generate", protect, generateBlueprint);
+
+// 📂 Get all blueprints for logged-in user
+router.get("/", protect, getUserBlueprints);
+
+router.get("/:projectId", protect, getBlueprintByProjectId);
 
 module.exports = router;
